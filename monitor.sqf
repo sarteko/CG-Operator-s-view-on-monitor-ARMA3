@@ -1,7 +1,9 @@
+private _use_ace_interaction = true;
 private _show_group = true;
 private _show_group_number = true;
 private _show_distance = true;
 private _show_civillian = false;
+private _helment_camera_pos_xyz = [0, 0.1, -0.1];
 private _ui_color_list_rgba = [0.8, 0.051, 0.051, 1];
 private _ui_color_confirm_rgba = [0.8, 0.051, 0.051, 0.8];
 private _ui_color_cancel_rgba = [0.3, 0.02, 0.02, 0.8];
@@ -11,6 +13,7 @@ private _string_ui_cancel = "Cancel";
 private _string_interactionMenu_select_operator = "Select Operator";
 private _string_interactionMenu_change_operator = "Change Operator";
 private _string_interactionMenu_disconnect_camera = "Disconnect Cameras";
+ARTEK_fnc_getOperatorTextureIndex = { 0 };
 
 if ((count _ui_color_header_hex_RRGGBB) == 9) then {
     _ui_color_header_hex_RRGGBB = _ui_color_header_hex_RRGGBB select [0,7];
@@ -30,6 +33,8 @@ if (isServer) then {
 	missionNamespace setVariable ["ARTEK_string_interactionMenu_select",_string_interactionMenu_select_operator,true];
 	missionNamespace setVariable ["ARTEK_string_interactionMenu_change",_string_interactionMenu_change_operator,true];
 	missionNamespace setVariable ["ARTEK_string_interactionMenu_disconnect",_string_interactionMenu_disconnect_camera,true];
+    if (isClass (configFile >> "CfgPatches" >> "ace_main") && _use_ace_interaction) then { missionNamespace setVariable ["ARTEK_use_ace_interaction", true, true]; };
+    missionNamespace setVariable ["ARTEK_adjust_hcam_pos", _helment_camera_pos_xyz, true];
 
 	private _ARTEK_OperatorCam_SyncConfig = [];
 	{
@@ -118,9 +123,7 @@ ARTEK_fnc_getOperatorsWithCamera = {
         !isNull _x &&  
         ([_x, ["ItemcTabHCam"]] call cTab_fnc_checkGear || "ItemcTabHCam" in (items _x))  
     }  
-};  
-  
-ARTEK_fnc_getOperatorTextureIndex = { 0 };  
+};
   
 ARTEK_fnc_startOperatorFeed = {  
     params ["_monitor", "_operator"];  
@@ -144,13 +147,13 @@ ARTEK_fnc_startOperatorFeed = {
             };  
             private _eyePos = eyePos _operator;  
             private _eyeDir = eyeDirection _operator;  
-            private _adjustedPos = _eyePos vectorAdd ((_eyeDir vectorMultiply 0.08) vectorAdd [-0.162, -0.015, -0.01]);  
+            private _adjustedPos = _eyePos vectorAdd ((_eyeDir vectorMultiply 0.08) vectorAdd (missionNamespace getVariable ["ARTEK_adjust_hcam_pos", [0.12, 0, 0.15]]));
             _cam setPosASL _adjustedPos;  
             _cam setVectorDirAndUp [_eyeDir, [0,0,1]];  
             _cam camSetFov 0.85;  
             _cam camCommit 0;  
             sleep 0.01;  
-        };  
+        }; 
         if (!isNull _cam) then {  
             _cam cameraEffect ["terminate", "back"];  
             camDestroy _cam;  
@@ -160,15 +163,19 @@ ARTEK_fnc_startOperatorFeed = {
   
 ARTEK_fnc_stopOperatorFeed = {  
     params ["_monitor"];  
-    _monitor setVariable ["operatorFeedActive", false, true];  
-    private _cam = _monitor getVariable ["operatorCam", objNull];  
-    if (!isNull _cam) then {  
-        _cam cameraEffect ["terminate", "back"];  
-        camDestroy _cam;  
-    };  
-    private _textureIndex = [_monitor] call ARTEK_fnc_getOperatorTextureIndex;  
-    _monitor setObjectTextureGlobal [_textureIndex, ""];  
-    _monitor setVariable ["connectedOperator", objNull, true];  
+
+    {
+        _monitor = _x;
+        _monitor setVariable ["operatorFeedActive", false, true];  
+        private _cam = _monitor getVariable ["operatorCam", objNull];  
+        if (!isNull _cam) then {  
+            _cam cameraEffect ["terminate", "back"];  
+            camDestroy _cam;  
+        };  
+        private _textureIndex = [_monitor] call ARTEK_fnc_getOperatorTextureIndex;  
+        _monitor setObjectTextureGlobal [_textureIndex, "a3\data_f\black_sum.paa"];
+        _monitor setVariable ["connectedOperator", objNull, true]; 
+    } forEach ARTEK_OperatorCam_SyncConfig;
 };  
   
 ARTEK_fnc_syncOperatorMonitorState = {  
@@ -183,7 +190,7 @@ ARTEK_fnc_syncOperatorMonitorState = {
         };  
     };  
 };  
-  
+
 ARTEK_fnc_initOperatorCam = {  
     params ["_monitor"];  
     removeAllActions _monitor;  
@@ -193,9 +200,9 @@ ARTEK_fnc_initOperatorCam = {
     _monitor setVariable ["operatorRenderTarget", format["rendertarget%1", _renderIndex], true];  
     _monitor setVariable ["operatorFeedActive", false, true];  
  
-    if (hasInterface) then {  
- 
-        _monitor addAction [missionNamespace getVariable ["ARTEK_string_interactionMenu_select", "Select Operator"], { 
+    if (hasInterface) then {
+
+        private _statement_selectOperator = {
             params ["_target", "_caller"]; 
             private _operators = call ARTEK_fnc_getOperatorsWithCamera; 
             if (count _operators == 0) exitWith { hintSilent "No operators with cameras available"; }; 
@@ -213,12 +220,7 @@ ARTEK_fnc_initOperatorCam = {
 
 				if (missionNamespace getVariable  ["ARTEK_allow_groupNumber",false]) then { 
 					_number = ((units (group _x)) find _x)+1;
-
-					if (missionNamespace getVariable ["ARTEK_allow_groupID",false]) then {
-						_number = format [" %1. ", _number]; 
-					} else {
-						_number = format ["%1. ", _number]; 
-					};
+					_number = format ["[%1] ", _number];
 				};
 
 				if (missionNamespace getVariable  ["ARTEK_allow_distance",false]) then { 
@@ -241,10 +243,11 @@ ARTEK_fnc_initOperatorCam = {
                 {}, 
                 [_target, _operatorList] 
             ] call ARTEK_fnc_selectOperatorDialog; 
-        }, nil, 1.5, true, true, "", "(_target distance _this < 3) && !(_target getVariable ['operatorFeedActive',false]) && (isPlayer _this) && (side _this in [west,civilian])"]; 
- 
- 
-        _monitor addAction [missionNamespace getVariable ["ARTEK_string_interactionMenu_select","Change Operator"], { 
+        };
+
+        private _condition_selectOperator = { !(_target getVariable ["operatorFeedActive",false]) };
+
+        private _statement_changeOperator = { 
             params ["_target", "_caller"]; 
             private _operators = call ARTEK_fnc_getOperatorsWithCamera; 
             if (count _operators == 0) exitWith { hintSilent "No operators with cameras available"; }; 
@@ -295,13 +298,31 @@ ARTEK_fnc_initOperatorCam = {
                 {}, 
                 [_target, _operatorList] 
             ] call ARTEK_fnc_selectOperatorDialog; 
-        }, nil, 1.4, true, true, "", "(_target distance _this < 3) && (_target getVariable ['operatorFeedActive',false]) && (isPlayer _this) && (side _this in [west,civilian])"]; 
- 
- 
-        _monitor addAction [missionNamespace getVariable ["ARTEK_string_interactionMenu_disconnect","Disconnect Camera"], { 
+        };
+
+        private _condition_changeOperator = { _target getVariable ['operatorFeedActive',false] };
+
+        private _statement_disconnect_cams = { 
             params ["_target"]; 
             [[_target], "ARTEK_fnc_stopOperatorFeed", true, false] call BIS_fnc_MP; 
-        }, nil, 1.2, true, true, "", "(_target distance _this < 3) && (_target getVariable ['operatorFeedActive',false]) && (isPlayer _this) && (side _this in [west,civilian])"]; 
+        };
+
+        private _condition_disconnect_cams = { _target getVariable ['operatorFeedActive',false] };
+
+        if (missionNamespace getVariable ["ARTEK_use_ace_interaction", true]) then {
+            private _actions = [];
+            private _selectOperator = ["Select Operator", missionNamespace getVariable ["ARTEK_string_interactionMenu_select", "Select Operator"], "", _statement_selectOperator, _condition_selectOperator, {}, [], [0, 0, 0], 3] call ace_interact_menu_fnc_createAction;
+            private _changeOperator = ["Change Operator", missionNamespace getVariable ["ARTEK_string_interactionMenu_change", "Change Operator"], "", _statement_changeOperator, _condition_changeOperator, {}, [], [0, 0, 0], 3] call ace_interact_menu_fnc_createAction;
+            private _disconnectCams = ["Disconnect Camera", missionNamespace getVariable ["ARTEK_string_interactionMenu_disconnect","Disconnect Camera"], "", _statement_disconnect_cams, _condition_disconnect_cams, {}, [], [0, 0, 0], 3] call ace_interact_menu_fnc_createAction;
+            [_monitor, 0, ["ACE_MainActions"], _selectOperator] call ace_interact_menu_fnc_addActionToObject;
+            [_monitor, 0, ["ACE_MainActions"], _changeOperator] call ace_interact_menu_fnc_addActionToObject;
+            [_monitor, 0, ["ACE_MainActions"], _disconnectCams] call ace_interact_menu_fnc_addActionToObject;
+            
+        } else {
+            _monitor addAction [missionNamespace getVariable ["ARTEK_string_interactionMenu_select", "Select Operator"], _statement_selectOperator, nil, 1.5, true, true, "", str _condition_selectOperator];
+            _monitor addAction [missionNamespace getVariable ["ARTEK_string_interactionMenu_change","Change Operator"], _statement_changeOperator, nil, 1.4, true, true, "", str _condition_changeOperator];
+            _monitor addAction [missionNamespace getVariable ["ARTEK_string_interactionMenu_disconnect","Disconnect Camera"], _statement_disconnect_cams, nil, 1.3, true, true, "", str _condition_disconnect_cams];
+        };
     }; 
 };  
   
