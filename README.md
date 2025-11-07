@@ -79,7 +79,7 @@ Consente di **attivare o disattivare la visione notturna** direttamente dal menu
 
 ---
 
-## 🧰 FIX e TODO
+## 🧰 FIX
 
 - [ ] Migliorare la visualizzazione dei **binocoli** sui monitor.  
 - [ ] Aumentare la **distanza visiva PiP** degli oggetti nel feed della torretta UAV.  
