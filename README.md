@@ -12,11 +12,13 @@ Non appena finisco (se riesco a finirlo 😅) il menu ACE completo, realizzerò 
 
 ## 📸 Screenshot
 
-Triggher with script
+<div align="center">
+
+<p><b>Trigger with script</b></p>
 
 <img width="374" height="338" alt="logicadigioco" src="https://github.com/user-attachments/assets/2fc115b6-03bb-4a01-8139-6fd136e24789" />
 
-"IteamcTabHCam"
+<p><b>"IteamcTabHCam"</b></p>
 
 <img width="637" height="358" alt="sc4" src="https://github.com/user-attachments/assets/4530ad3d-c757-4bbc-807f-2223122ffd58" />
 
