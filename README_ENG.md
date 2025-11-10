@@ -7,6 +7,8 @@ As soon as I finish (if I ever manage to 😅) the full ACE menu, I will also cr
 
 ## 🧩 Required Mods
 
+- [CBA_A3](https://steamcommunity.com/workshop/filedetails/?id=450814997)  
+- [ACE](https://steamcommunity.com/workshop/filedetails/?id=463939057)  
 - [cTab NSWDG Edition](https://steamcommunity.com/sharedfiles/filedetails/?id=2511318948)  
 - [Hate's Digital Camera](https://steamcommunity.com/sharedfiles/filedetails/?id=2577441180)  
 - [BLUFORCE to CIVILIAN for Undercover](https://steamcommunity.com/sharedfiles/filedetails/?id=3595437256)
@@ -97,3 +99,4 @@ Allows toggling **Night Vision ON/OFF** directly via the ACE menu.
 ## 💡 Conclusions
 If you have **ideas, suggestions, or want to contribute** to improving this script, your help is **more than welcome!**  
 Every contribution is greatly appreciated 🙌
+
